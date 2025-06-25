@@ -1,11 +1,984 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <title>나의 첫 번째 웹페이지</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCG Calculus Toolkit</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            overflow: hidden;
+        }
+        
+        #container {
+            display: flex;
+            height: 100vh;
+        }
+        
+        #viewport {
+            flex: 1;
+            position: relative;
+        }
+        
+        #controls {
+            width: 350px;
+            background: #2a2a2a;
+            overflow-y: auto;
+            padding: 20px;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.5);
+        }
+        
+        .panel {
+            background: #333;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .panel.active {
+            display: block;
+        }
+        
+        .panel h3 {
+            color: #4CAF50;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .control-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+            color: #ccc;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            margin-bottom: 5px;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 5px;
+            background: #555;
+            outline: none;
+            border-radius: 3px;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 15px;
+            height: 15px;
+            background: #4CAF50;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+        
+        input[type="number"], input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            background: #444;
+            border: 1px solid #555;
+            border-radius: 4px;
+            color: #fff;
+        }
+        
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            width: 100%;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #45a049;
+        }
+        
+        button.secondary {
+            background: #555;
+            margin-top: 10px;
+        }
+        
+        button.secondary:hover {
+            background: #666;
+        }
+        
+        #navigation {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .nav-btn {
+            flex: 1;
+            min-width: 100px;
+            padding: 8px;
+            font-size: 12px;
+            background: #444;
+        }
+        
+        .nav-btn.active {
+            background: #4CAF50;
+        }
+        
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .rule-item {
+            background: #444;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+        
+        .rule-item button {
+            width: auto;
+            padding: 5px 10px;
+            font-size: 12px;
+            background: #d32f2f;
+        }
+        
+        .stats {
+            background: #444;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        
+        .volume-display {
+            background: #4CAF50;
+            color: white;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 18px;
+            margin-top: 10px;
+        }
+        
+        .export-section {
+            margin-top: 20px;
+        }
+        
+        select {
+            width: 100%;
+            padding: 8px;
+            background: #444;
+            border: 1px solid #555;
+            border-radius: 4px;
+            color: #fff;
+            margin-bottom: 10px;
+        }
+    </style>
 </head>
 <body>
-  <h1>안녕하세요!</h1>
-  <p>이것은 나의 첫 번째 HTML 문서입니다.</p>
+    <div id="container">
+        <div id="viewport">
+            <div id="info">
+                FPS: <span id="fps">0</span> | 
+                Vertices: <span id="vertices">0</span> |
+                Mode: <span id="mode">Terrain</span>
+            </div>
+        </div>
+        
+        <div id="controls">
+            <h2 style="margin-bottom: 20px; text-align: center; color: #4CAF50;">PCG Calculus Toolkit</h2>
+            
+            <div id="navigation">
+                <button class="nav-btn active" onclick="showPanel(1)">지형 생성</button>
+                <button class="nav-btn" onclick="showPanel(2)">경사도 분석</button>
+                <button class="nav-btn" onclick="showPanel(3)">애셋 배치</button>
+                <button class="nav-btn" onclick="showPanel(4)">배치 결과</button>
+                <button class="nav-btn" onclick="showPanel(5)">부피 계산</button>
+                <button class="nav-btn" onclick="showPanel(6)">내보내기</button>
+            </div>
+            
+            <!-- Panel 1: 지형 생성 -->
+            <div class="panel active" id="panel1">
+                <h3>1. 지형 생성 패널</h3>
+                
+                <div class="control-group">
+                    <label>옥타브 수: <span id="octavesValue">4</span></label>
+                    <input type="range" id="octaves" min="1" max="8" value="4" step="1">
+                </div>
+                
+                <div class="control-group">
+                    <label>진폭 (Gain): <span id="gainValue">0.5</span></label>
+                    <input type="range" id="gain" min="0.1" max="0.9" value="0.5" step="0.1">
+                </div>
+                
+                <div class="control-group">
+                    <label>주파수 (Lacunarity): <span id="lacunarityValue">2.0</span></label>
+                    <input type="range" id="lacunarity" min="1.5" max="3.0" value="2.0" step="0.1">
+                </div>
+                
+                <div class="control-group">
+                    <label>스케일: <span id="scaleValue">0.02</span></label>
+                    <input type="range" id="scale" min="0.01" max="0.1" value="0.02" step="0.01">
+                </div>
+                
+                <div class="control-group">
+                    <label>높이 배수: <span id="heightValue">30</span></label>
+                    <input type="range" id="height" min="10" max="100" value="30" step="5">
+                </div>
+                
+                <div class="control-group">
+                    <label>시드 값:</label>
+                    <input type="number" id="seed" value="12345">
+                </div>
+                
+                <button onclick="generateTerrain()">지형 생성</button>
+                <button class="secondary" onclick="randomizeSeed()">랜덤 시드</button>
+            </div>
+            
+            <!-- Panel 2: 경사도 분석 -->
+            <div class="panel" id="panel2">
+                <h3>2. 경사도 분석 뷰</h3>
+                
+                <div class="control-group">
+                    <label>경사도 표시 모드:</label>
+                    <select id="slopeMode">
+                        <option value="heatmap">히트맵</option>
+                        <option value="contour">등고선</option>
+                        <option value="normal">노말 벡터</option>
+                    </select>
+                </div>
+                
+                <button onclick="analyzeSteepness()">경사도 분석</button>
+                <button class="secondary" onclick="resetView()">원래 뷰로</button>
+                
+                <div class="stats">
+                    <p>평균 경사도: <span id="avgSteepness">-</span>°</p>
+                    <p>최대 경사도: <span id="maxSteepness">-</span>°</p>
+                    <p>평지 비율: <span id="flatPercent">-</span>%</p>
+                </div>
+            </div>
+            
+            <!-- Panel 3: 애셋 배치 규칙 -->
+            <div class="panel" id="panel3">
+                <h3>3. 규칙 기반 애셋 배치</h3>
+                
+                <div class="control-group">
+                    <label>애셋 종류:</label>
+                    <select id="assetType">
+                        <option value="tree">나무</option>
+                        <option value="rock">바위</option>
+                        <option value="grass">풀</option>
+                        <option value="flower">꽃</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <label>경사도 범위 (도):</label>
+                    <input type="number" id="slopeMin" placeholder="최소" value="0" style="width: 48%; display: inline-block;">
+                    <input type="number" id="slopeMax" placeholder="최대" value="30" style="width: 48%; display: inline-block; float: right;">
+                </div>
+                
+                <div class="control-group">
+                    <label>높이 범위:</label>
+                    <input type="number" id="heightMin" placeholder="최소" value="0" style="width: 48%; display: inline-block;">
+                    <input type="number" id="heightMax" placeholder="최대" value="50" style="width: 48%; display: inline-block; float: right;">
+                </div>
+                
+                <div class="control-group">
+                    <label>밀도: <span id="densityValue">50</span>%</label>
+                    <input type="range" id="density" min="10" max="100" value="50" step="10">
+                </div>
+                
+                <button onclick="addRule()">규칙 추가</button>
+                
+                <div id="rulesList" style="margin-top: 20px;">
+                    <h4 style="margin-bottom: 10px;">배치 규칙 목록:</h4>
+                </div>
+            </div>
+            
+            <!-- Panel 4: 배치 결과 -->
+            <div class="panel" id="panel4">
+                <h3>4. 배치 결과 확인</h3>
+                
+                <button onclick="applyRules()">규칙 적용</button>
+                <button class="secondary" onclick="clearAssets()">애셋 제거</button>
+                
+                <div class="stats">
+                    <h4>배치된 애셋:</h4>
+                    <div id="assetStats"></div>
+                </div>
+            </div>
+            
+            <!-- Panel 5: 부피 계산 -->
+            <div class="panel" id="panel5">
+                <h3>5. 부피 계산 툴</h3>
+                
+                <p style="margin-bottom: 15px;">마우스로 드래그하여 영역을 선택하세요.</p>
+                
+                <button onclick="enableVolumeSelection()">영역 선택 모드</button>
+                <button class="secondary" onclick="calculateFullVolume()">전체 부피 계산</button>
+                
+                <div class="volume-display" id="volumeDisplay">
+                    부피: - m³
+                </div>
+                
+                <div class="control-group" style="margin-top: 15px;">
+                    <label>기준 높이:</label>
+                    <input type="number" id="baseHeight" value="0" step="5">
+                </div>
+            </div>
+            
+            <!-- Panel 6: 내보내기 -->
+            <div class="panel" id="panel6">
+                <h3>6. 결과 요약 및 내보내기</h3>
+                
+                <div class="stats">
+                    <h4>월드 통계:</h4>
+                    <p>지형 크기: 200 x 200</p>
+                    <p>총 애셋 수: <span id="totalAssets">0</span></p>
+                    <p>총 부피: <span id="totalVolume">-</span> m³</p>
+                    <p>평균 높이: <span id="avgHeight">-</span> m</p>
+                </div>
+                
+                <div class="export-section">
+                    <button onclick="exportData('csv')">CSV로 내보내기</button>
+                    <button onclick="exportData('json')">JSON으로 내보내기</button>
+                    <button onclick="exportHeightmap()">높이맵 이미지 저장</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Three.js 설정
+        let scene, camera, renderer;
+        let terrain, terrainGeometry, terrainMaterial;
+        let assets = [];
+        let rules = [];
+        let steepnessData = [];
+        let currentPanel = 1;
+        let volumeSelectionMode = false;
+        let selectionBox = null;
+        
+        // 초기화
+        function init() {
+            // Scene 설정
+            scene = new THREE.Scene();
+            scene.fog = new THREE.Fog(0x1a1a1a, 100, 500);
+            
+            // Camera 설정
+            const aspect = window.innerWidth / window.innerHeight;
+            camera = new THREE.PerspectiveCamera(60, aspect, 0.1, 1000);
+            camera.position.set(150, 100, 150);
+            camera.lookAt(0, 0, 0);
+            
+            // Renderer 설정
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth - 350, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('viewport').appendChild(renderer.domElement);
+            
+            // 조명 설정
+            const ambientLight = new THREE.AmbientLight(0x404040);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(50, 100, 50);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.camera.left = -100;
+            directionalLight.shadow.camera.right = 100;
+            directionalLight.shadow.camera.top = 100;
+            directionalLight.shadow.camera.bottom = -100;
+            scene.add(directionalLight);
+            
+            // Grid Helper
+            const gridHelper = new THREE.GridHelper(200, 20, 0x444444, 0x222222);
+            scene.add(gridHelper);
+            
+            // 마우스 컨트롤
+            setupMouseControls();
+            
+            // 슬라이더 이벤트 리스너
+            setupSliderListeners();
+            
+            // 초기 지형 생성
+            generateTerrain();
+            
+            // 애니메이션 루프
+            animate();
+        }
+        
+        // 슬라이더 이벤트 리스너 설정
+        function setupSliderListeners() {
+            ['octaves', 'gain', 'lacunarity', 'scale', 'height', 'density'].forEach(id => {
+                const slider = document.getElementById(id);
+                const valueSpan = document.getElementById(id + 'Value');
+                if (slider && valueSpan) {
+                    slider.addEventListener('input', (e) => {
+                        valueSpan.textContent = e.target.value;
+                    });
+                }
+            });
+        }
+        
+        // 마우스 컨트롤 설정
+        function setupMouseControls() {
+            let mouseX = 0, mouseY = 0;
+            let isMouseDown = false;
+            
+            renderer.domElement.addEventListener('mousedown', (e) => {
+                isMouseDown = true;
+                mouseX = e.clientX;
+                mouseY = e.clientY;
+                
+                if (volumeSelectionMode) {
+                    startVolumeSelection(e);
+                }
+            });
+            
+            renderer.domElement.addEventListener('mousemove', (e) => {
+                if (isMouseDown && !volumeSelectionMode) {
+                    const deltaX = e.clientX - mouseX;
+                    const deltaY = e.clientY - mouseY;
+                    
+                    camera.position.x = camera.position.x * Math.cos(deltaX * 0.01) - camera.position.z * Math.sin(deltaX * 0.01);
+                    camera.position.z = camera.position.x * Math.sin(deltaX * 0.01) + camera.position.z * Math.cos(deltaX * 0.01);
+                    camera.position.y += deltaY * 0.5;
+                    
+                    camera.lookAt(0, 0, 0);
+                    
+                    mouseX = e.clientX;
+                    mouseY = e.clientY;
+                }
+                
+                if (volumeSelectionMode && isMouseDown) {
+                    updateVolumeSelection(e);
+                }
+            });
+            
+            renderer.domElement.addEventListener('mouseup', (e) => {
+                isMouseDown = false;
+                
+                if (volumeSelectionMode) {
+                    endVolumeSelection(e);
+                }
+            });
+            
+            renderer.domElement.addEventListener('wheel', (e) => {
+                const scale = e.deltaY > 0 ? 1.1 : 0.9;
+                camera.position.multiplyScalar(scale);
+                camera.lookAt(0, 0, 0);
+            });
+        }
+        
+        // 심플렉스 노이즈 구현
+        function noise2D(x, y) {
+            // 간단한 의사 난수 노이즈 (실제로는 Perlin/Simplex 노이즈 사용)
+            return Math.sin(x * 1.2) * Math.cos(y * 1.3) * Math.sin((x + y) * 0.8);
+        }
+        
+        // fBm (Fractal Brownian Motion) 구현
+        function fbm(x, y, octaves, gain, lacunarity, scale) {
+            let value = 0;
+            let amplitude = 1;
+            let frequency = scale;
+            let maxValue = 0;
+            
+            for (let i = 0; i < octaves; i++) {
+                value += amplitude * noise2D(x * frequency, y * frequency);
+                maxValue += amplitude;
+                amplitude *= gain;
+                frequency *= lacunarity;
+            }
+            
+            return value / maxValue;
+        }
+        
+        // 지형 생성
+        function generateTerrain() {
+            // 기존 지형 제거
+            if (terrain) {
+                scene.remove(terrain);
+            }
+            
+            const size = 200;
+            const segments = 100;
+            
+            // 파라미터 가져오기
+            const octaves = parseInt(document.getElementById('octaves').value);
+            const gain = parseFloat(document.getElementById('gain').value);
+            const lacunarity = parseFloat(document.getElementById('lacunarity').value);
+            const scale = parseFloat(document.getElementById('scale').value);
+            const heightMultiplier = parseFloat(document.getElementById('height').value);
+            const seed = parseInt(document.getElementById('seed').value);
+            
+            // 지형 geometry 생성
+            terrainGeometry = new THREE.PlaneGeometry(size, size, segments, segments);
+            
+            // 높이맵 생성
+            const vertices = terrainGeometry.attributes.position;
+            for (let i = 0; i < vertices.count; i++) {
+                const x = vertices.getX(i);
+                const y = vertices.getY(i);
+                
+                // fBm을 사용한 높이 계산
+                const height = fbm(x + seed, y + seed, octaves, gain, lacunarity, scale) * heightMultiplier;
+                vertices.setZ(i, height);
+            }
+            
+            // 법선 재계산
+            terrainGeometry.computeVertexNormals();
+            
+            // Material 생성
+            terrainMaterial = new THREE.MeshPhongMaterial({
+                color: 0x3a7c3a,
+                flatShading: true,
+                side: THREE.DoubleSide
+            });
+            
+            // Mesh 생성
+            terrain = new THREE.Mesh(terrainGeometry, terrainMaterial);
+            terrain.rotation.x = -Math.PI / 2;
+            terrain.receiveShadow = true;
+            scene.add(terrain);
+            
+            // 정보 업데이트
+            updateInfo();
+        }
+        
+        // 경사도 분석
+        function analyzeSteepness() {
+            if (!terrainGeometry) return;
+            
+            const mode = document.getElementById('slopeMode').value;
+            const vertices = terrainGeometry.attributes.position;
+            const normals = terrainGeometry.attributes.normal;
+            
+            steepnessData = [];
+            let totalSteepness = 0;
+            let maxSteepness = 0;
+            let flatCount = 0;
+            
+            // 색상 배열 생성
+            const colors = [];
+            
+            for (let i = 0; i < vertices.count; i++) {
+                // 법선 벡터 가져오기
+                const nx = normals.getX(i);
+                const ny = normals.getY(i);
+                const nz = normals.getZ(i);
+                
+                // 경사도 계산 (도 단위)
+                const steepness = Math.acos(Math.abs(nz)) * 180 / Math.PI;
+                steepnessData.push(steepness);
+                
+                totalSteepness += steepness;
+                maxSteepness = Math.max(maxSteepness, steepness);
+                if (steepness < 15) flatCount++;
+                
+                // 히트맵 색상 계산
+                let r, g, b;
+                if (mode === 'heatmap') {
+                    const t = Math.min(steepness / 45, 1);
+                    r = t;
+                    g = 1 - t;
+                    b = 0;
+                } else if (mode === 'normal') {
+                    r = (nx + 1) / 2;
+                    g = (ny + 1) / 2;
+                    b = (nz + 1) / 2;
+                } else {
+                    // 등고선 모드
+                    const contourLevel = Math.floor(vertices.getZ(i) / 10) % 2;
+                    r = contourLevel;
+                    g = contourLevel;
+                    b = contourLevel;
+                }
+                
+                colors.push(r, g, b);
+            }
+            
+            // 색상 속성 추가
+            terrainGeometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            terrainMaterial.vertexColors = true;
+            terrainMaterial.needsUpdate = true;
+            
+            // 통계 업데이트
+            const avgSteepness = totalSteepness / vertices.count;
+            const flatPercent = (flatCount / vertices.count) * 100;
+            
+            document.getElementById('avgSteepness').textContent = avgSteepness.toFixed(1);
+            document.getElementById('maxSteepness').textContent = maxSteepness.toFixed(1);
+            document.getElementById('flatPercent').textContent = flatPercent.toFixed(1);
+            
+            document.getElementById('mode').textContent = 'Steepness Analysis';
+        }
+        
+        // 원래 뷰로 복원
+        function resetView() {
+            terrainMaterial.vertexColors = false;
+            terrainMaterial.needsUpdate = true;
+            document.getElementById('mode').textContent = 'Terrain';
+        }
+        
+        // 규칙 추가
+        function addRule() {
+            const rule = {
+                id: Date.now(),
+                assetType: document.getElementById('assetType').value,
+                slopeMin: parseFloat(document.getElementById('slopeMin').value),
+                slopeMax: parseFloat(document.getElementById('slopeMax').value),
+                heightMin: parseFloat(document.getElementById('heightMin').value),
+                heightMax: parseFloat(document.getElementById('heightMax').value),
+                density: parseFloat(document.getElementById('density').value) / 100
+            };
+            
+            rules.push(rule);
+            updateRulesList();
+        }
+        
+        // 규칙 목록 업데이트
+        function updateRulesList() {
+            const rulesList = document.getElementById('rulesList');
+            rulesList.innerHTML = '<h4 style="margin-bottom: 10px;">배치 규칙 목록:</h4>';
+            
+            rules.forEach(rule => {
+                const ruleItem = document.createElement('div');
+                ruleItem.className = 'rule-item';
+                ruleItem.innerHTML = `
+                    <p><strong>${rule.assetType}</strong></p>
+                    <p>경사도: ${rule.slopeMin}° - ${rule.slopeMax}°</p>
+                    <p>높이: ${rule.heightMin}m - ${rule.heightMax}m</p>
+                    <p>밀도: ${(rule.density * 100).toFixed(0)}%</p>
+                    <button onclick="removeRule(${rule.id})">제거</button>
+                `;
+                rulesList.appendChild(ruleItem);
+            });
+        }
+        
+        // 규칙 제거
+        function removeRule(id) {
+            rules = rules.filter(rule => rule.id !== id);
+            updateRulesList();
+        }
+        
+        // 규칙 적용
+        function applyRules() {
+            clearAssets();
+            
+            if (!terrainGeometry || steepnessData.length === 0) {
+                alert('먼저 지형을 생성하고 경사도 분석을 실행하세요.');
+                return;
+            }
+            
+            const vertices = terrainGeometry.attributes.position;
+            const assetCounts = {};
+            
+            rules.forEach(rule => {
+                assetCounts[rule.assetType] = 0;
+                
+                for (let i = 0; i < vertices.count; i += Math.floor(1 / rule.density)) {
+                    const x = vertices.getX(i);
+                    const y = vertices.getY(i);
+                    const z = vertices.getZ(i);
+                    const steepness = steepnessData[i];
+                    
+                    // 규칙 조건 확인
+                    if (steepness >= rule.slopeMin && steepness <= rule.slopeMax &&
+                        z >= rule.heightMin && z <= rule.heightMax &&
+                        Math.random() < rule.density) {
+                        
+                        // 애셋 생성
+                        const asset = createAsset(rule.assetType);
+                        asset.position.set(x, z, -y);
+                        scene.add(asset);
+                        assets.push(asset);
+                        assetCounts[rule.assetType]++;
+                    }
+                }
+            });
+            
+            // 통계 업데이트
+            updateAssetStats(assetCounts);
+        }
+        
+        // 애셋 생성
+        function createAsset(type) {
+            let geometry, material, mesh;
+            
+            switch(type) {
+                case 'tree':
+                    // 나무 줄기
+                    geometry = new THREE.CylinderGeometry(0.5, 0.7, 5);
+                    material = new THREE.MeshPhongMaterial({ color: 0x8B4513 });
+                    mesh = new THREE.Mesh(geometry, material);
+                    
+                    // 나뭇잎
+                    const leaves = new THREE.Mesh(
+                        new THREE.ConeGeometry(2, 4, 8),
+                        new THREE.MeshPhongMaterial({ color: 0x228B22 })
+                    );
+                    leaves.position.y = 4;
+                    mesh.add(leaves);
+                    break;
+                    
+                case 'rock':
+                    geometry = new THREE.DodecahedronGeometry(1);
+                    material = new THREE.MeshPhongMaterial({ color: 0x808080 });
+                    mesh = new THREE.Mesh(geometry, material);
+                    mesh.scale.set(
+                        0.5 + Math.random() * 0.5,
+                        0.5 + Math.random() * 0.5,
+                        0.5 + Math.random() * 0.5
+                    );
+                    break;
+                    
+                case 'grass':
+                    geometry = new THREE.ConeGeometry(0.1, 1, 4);
+                    material = new THREE.MeshPhongMaterial({ color: 0x90EE90 });
+                    mesh = new THREE.Mesh(geometry, material);
+                    break;
+                    
+                case 'flower':
+                    geometry = new THREE.SphereGeometry(0.3, 8, 8);
+                    material = new THREE.MeshPhongMaterial({ 
+                        color: Math.random() > 0.5 ? 0xFF69B4 : 0xFFFF00 
+                    });
+                    mesh = new THREE.Mesh(geometry, material);
+                    mesh.position.y = 0.5;
+                    break;
+            }
+            
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            return mesh;
+        }
+        
+        // 애셋 통계 업데이트
+        function updateAssetStats(counts) {
+            const statsDiv = document.getElementById('assetStats');
+            statsDiv.innerHTML = '';
+            
+            let total = 0;
+            for (const [type, count] of Object.entries(counts)) {
+                statsDiv.innerHTML += `<p>${type}: ${count}개</p>`;
+                total += count;
+            }
+            
+            document.getElementById('totalAssets').textContent = total;
+        }
+        
+        // 애셋 제거
+        function clearAssets() {
+            assets.forEach(asset => scene.remove(asset));
+            assets = [];
+            document.getElementById('assetStats').innerHTML = '';
+            document.getElementById('totalAssets').textContent = '0';
+        }
+        
+        // 부피 계산 (전체)
+        function calculateFullVolume() {
+            if (!terrainGeometry) return;
+            
+            const vertices = terrainGeometry.attributes.position;
+            const baseHeight = parseFloat(document.getElementById('baseHeight').value);
+            let totalVolume = 0;
+            
+            // 삼각형 단위로 부피 계산
+            const indices = terrainGeometry.index.array;
+            for (let i = 0; i < indices.length; i += 3) {
+                const i1 = indices[i];
+                const i2 = indices[i + 1];
+                const i3 = indices[i + 2];
+                
+                const x1 = vertices.getX(i1), y1 = vertices.getY(i1), z1 = vertices.getZ(i1);
+                const x2 = vertices.getX(i2), y2 = vertices.getY(i2), z2 = vertices.getZ(i2);
+                const x3 = vertices.getX(i3), y3 = vertices.getY(i3), z3 = vertices.getZ(i3);
+                
+                // 삼각기둥 부피 계산
+                const area = 0.5 * Math.abs(
+                    (x2 - x1) * (y3 - y1) - (x3 - x1) * (y2 - y1)
+                );
+                const avgHeight = (z1 + z2 + z3) / 3 - baseHeight;
+                
+                if (avgHeight > 0) {
+                    totalVolume += area * avgHeight;
+                }
+            }
+            
+            document.getElementById('volumeDisplay').textContent = `부피: ${totalVolume.toFixed(0)} m³`;
+            document.getElementById('totalVolume').textContent = `${totalVolume.toFixed(0)} m³`;
+        }
+        
+        // 부피 선택 모드
+        function enableVolumeSelection() {
+            volumeSelectionMode = true;
+            document.getElementById('mode').textContent = 'Volume Selection';
+        }
+        
+        function startVolumeSelection(e) {
+            // 선택 영역 시작 (구현 간소화)
+        }
+        
+        function updateVolumeSelection(e) {
+            // 선택 영역 업데이트 (구현 간소화)
+        }
+        
+        function endVolumeSelection(e) {
+            volumeSelectionMode = false;
+            calculateFullVolume(); // 간단히 전체 부피 계산
+        }
+        
+        // 데이터 내보내기
+        function exportData(format) {
+            const data = {
+                terrain: {
+                    octaves: document.getElementById('octaves').value,
+                    gain: document.getElementById('gain').value,
+                    lacunarity: document.getElementById('lacunarity').value,
+                    scale: document.getElementById('scale').value,
+                    height: document.getElementById('height').value,
+                    seed: document.getElementById('seed').value
+                },
+                rules: rules,
+                stats: {
+                    totalAssets: document.getElementById('totalAssets').textContent,
+                    totalVolume: document.getElementById('totalVolume').textContent,
+                    avgSteepness: document.getElementById('avgSteepness').textContent,
+                    maxSteepness: document.getElementById('maxSteepness').textContent,
+                    flatPercent: document.getElementById('flatPercent').textContent
+                }
+            };
+            
+            let content, filename, type;
+            
+            if (format === 'json') {
+                content = JSON.stringify(data, null, 2);
+                filename = 'terrain_data.json';
+                type = 'application/json';
+            } else {
+                // CSV 형식
+                content = 'Parameter,Value\n';
+                content += `Octaves,${data.terrain.octaves}\n`;
+                content += `Gain,${data.terrain.gain}\n`;
+                content += `Lacunarity,${data.terrain.lacunarity}\n`;
+                content += `Scale,${data.terrain.scale}\n`;
+                content += `Height,${data.terrain.height}\n`;
+                content += `Seed,${data.terrain.seed}\n`;
+                content += `Total Assets,${data.stats.totalAssets}\n`;
+                content += `Total Volume,${data.stats.totalVolume}\n`;
+                content += `Average Steepness,${data.stats.avgSteepness}\n`;
+                content += `Max Steepness,${data.stats.maxSteepness}\n`;
+                content += `Flat Percent,${data.stats.flatPercent}\n`;
+                filename = 'terrain_data.csv';
+                type = 'text/csv';
+            }
+            
+            // 다운로드
+            const blob = new Blob([content], { type });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        // 높이맵 이미지 내보내기
+        function exportHeightmap() {
+            // 렌더러에서 이미지 캡처
+            renderer.render(scene, camera);
+            renderer.domElement.toBlob(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'heightmap.png';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+        }
+        
+        // 유틸리티 함수들
+        function randomizeSeed() {
+            document.getElementById('seed').value = Math.floor(Math.random() * 100000);
+            generateTerrain();
+        }
+        
+        function showPanel(panelNumber) {
+            currentPanel = panelNumber;
+            
+            // 모든 패널 숨기기
+            document.querySelectorAll('.panel').forEach(panel => {
+                panel.classList.remove('active');
+            });
+            
+            // 선택된 패널 표시
+            document.getElementById(`panel${panelNumber}`).classList.add('active');
+            
+            // 네비게이션 버튼 업데이트
+            document.querySelectorAll('.nav-btn').forEach((btn, index) => {
+                btn.classList.toggle('active', index + 1 === panelNumber);
+            });
+        }
+        
+        // 정보 업데이트
+        function updateInfo() {
+            if (terrainGeometry) {
+                document.getElementById('vertices').textContent = terrainGeometry.attributes.position.count;
+            }
+        }
+        
+        // 애니메이션 루프
+        let lastTime = 0;
+        function animate(time = 0) {
+            requestAnimationFrame(animate);
+            
+            // FPS 계산
+            const deltaTime = time - lastTime;
+            const fps = Math.round(1000 / deltaTime);
+            document.getElementById('fps').textContent = fps;
+            lastTime = time;
+            
+            // 렌더링
+            renderer.render(scene, camera);
+        }
+        
+        // 윈도우 리사이즈 처리
+        window.addEventListener('resize', () => {
+            const width = window.innerWidth - 350;
+            const height = window.innerHeight;
+            
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            
+            renderer.setSize(width, height);
+        });
+        
+        // 초기화 실행
+        init();
+    </script>
 </body>
 </html>
